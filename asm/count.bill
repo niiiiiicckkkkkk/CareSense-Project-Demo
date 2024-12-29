@@ -1,0 +1,10 @@
+# Count forever (used for testing)
+start:  load    one     # ac := one
+        add     count   # ac := count + 1
+        store   count   # count := count + 1
+        jump    start   # count again!
+
+done:   jump    start   # go back to start
+
+count:   .data   0       # accumulate the results here
+one:     .data   1       # constant 1

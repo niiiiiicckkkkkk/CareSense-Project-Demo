@@ -10,4 +10,6 @@ COPY tests ./tests/
 COPY asm ./asm/
 COPY 3364mach.cabal 3364mach.cabal
 
-ENTRYPOINT cabal run 3364mach
+RUN cabal install exe:3364mach
+
+ENTRYPOINT ["3364mach"]

@@ -1,0 +1,128 @@
+start:  load    istart  #
+        store   i       #  i := istart (nominally 1)
+iloop:  load    i       #  loop i from istart+1 to 9999
+        add     one     #
+        store   i       #    i := i+1
+        load    d9999   #
+        sub     i       #
+        jumpn   done    #    if (i>9999) goto done
+        load    one     #
+        store   j       #    j := 1
+jloop:  load    j       #    loop j from 2 to i-1
+        add     one     #
+        store   j       #      j := j+1
+        load    i       #
+        sub     j       #
+        jumpz   jdone   #      if (j==i) goto jdone
+        load    j       #
+        sub     one     #
+        store   k       #      k := j-1
+kloop:  load    k       #      loop k from j to i-1
+        add     one     #
+        store   k       #        k := k+1
+        sub     i       #
+        jumpz   jloop   #        if (k==i) goto jloop
+        load    j       #
+        mul     k       #
+        store   prod    #        product := j*k
+        sub     i       #        // if j*k==i then i is not prime
+        jumpz   iloop   #        if (product==i) goto iloop  // skip to next i
+        jumpn   kloop   #        if (product<i)  goto kloop  // keep looping k
+                        #        // k exceeds i/j, so skip to next j
+        jump    jloop   #        goto jloop
+        #
+        # If we reach here, then i is a prime number.  The only purpose
+        # of the code below is to convert i from binary into decimal so
+        # that the LED display can be understood by human observers.  If
+        # we were content to display the prime numbers in hexadecimal,
+        # we could skip all of this.
+        #
+jdone:  load    zero    #  'outnum' will hold the binary-coded decimal result
+        store   outnum  #  outnum := 0
+        load    i       #
+        store   remain  #  remainder := i
+        sub     d10000  #
+        jumpn   thsnds  #  jump out of entire i loop if i too big to display
+        jump    done    #  if (i>10000) goto done
+thsnds: load    zero    #  initialize 1000's digit to 0
+        store   hdigit  #  digit := 0
+nx1000: load    remain  #  loop over values for 1000's digit
+        sub     d1000   #
+        jumpn   hndrds  #    if (remainder<1000) goto hundreds
+        store   remain  #    remainder := remainder-1000
+        load    hdigit  #
+        add     h1000   #
+        store   hdigit  #    digit := digit+0x1000
+        jump    nx1000  #    keep looping over values for 1000's digit
+hndrds: load    hdigit  #  add the 1000's digit to 'outnum' total
+        add     outnum  #
+        store   outnum  #  outnum := outnum+digit
+        load    zero    #
+        store   hdigit  #  digit := 0
+nxt100: load    remain  #  loop over values for 100's digit
+        sub     d100    #
+        jumpn   tens    #    if (remainder<100) goto tens
+        store   remain  #    remainder := remainder-100
+        load    hdigit  #
+        add     h100    #
+        store   hdigit  #    digit := digit+0x100
+        jump    nxt100  #    keep looping over values for 100's digit
+tens:   load    hdigit  #  add the 100's digit to 'outnum' total
+        add     outnum  #
+        store   outnum  #  outnum := outnum+digit
+        load    zero    #
+        store   hdigit  #  digit := 0
+nxt10:  load    remain  #  loop over values for 10's digit
+        sub     d10     #
+        jumpn   ones    #    if (remainder<10) goto ones
+        store   remain  #    remainder := remainder-10
+        load    hdigit  #
+        add     h10     #
+        store   hdigit  #    digit := digit+0x10
+        jump    nxt10   #    keep looping over values for 10's digit
+ones:   load    hdigit  #  add the 10's digit to 'outnum' total
+        add     outnum  #
+        add     remain  #  now the remainder equals the ones digit
+        store   outnum  #  outnum := outnum+digit+remainder
+        #
+        # This block is here to delay O(1 second) after displaying each new
+        # prime number, so that you can see each number display.
+        #
+        load    Jdelay  #
+        store   j       #  j := Jdelay
+jdelay: load    Kdelay  #  loop k from Kdelay downto 1
+        store   k       #    k := Kdelay
+kdelay: load    k       #    loop k from Kdelay downto 1
+        sub     one     #
+        store   k       #      k := k-1
+        jumpnz  kdelay  #      if (k!=0) keep looping over k
+        load    j       #  
+        sub     one     #
+        store   j       #    j := j-1
+        jumpnz  jdelay  #    if (j!=0) keep looping over j
+        jump    iloop   #  go back up to try next candidate i      
+done:   jump    start   #  go back and start counting again from i==2
+#
+# This is where we define all of the constants and variables that
+# our program will use when it runs.
+#
+zero:   .data   0       #  store the constant '0'
+one:    .data   1       #  store the constant '1'
+i:      .data   0       #  store the loop variable 'i' (prime number cand.)
+j:      .data   0       #  store the loop variable 'j'
+k:      .data   0       #  store the loop variable 'k'
+prod:   .data   0       #  store the product 'prod' = j*k
+outnum: .data   0       #  compute/store binary-coded-decimal conversion of i
+remain: .data   0       #  store remainder used in BCD computation
+hdigit: .data   0       #  store hex value used to display one decimal digit
+h1000:  .data   4096    #  store hexadecimal constant 0x1000
+h100:   .data   256     #  store hexadecimal constant 0x100
+h10:    .data   16      #  store hexadecimal constant 0x10
+d10000: .data   10000    #  store decimal constant 10000
+d1000:  .data   1000     #  store decimal constant 1000
+d100:   .data   100     #  store decimal constant 100
+d10:    .data   10      #  store decimal constant 10
+d9999:  .data   9999    #  store decimal constant 9999 (= 270f in hexadecimal)
+istart: .data   1       #  starting value for i (i.e. first prime to check)
+Jdelay: .data   4096    #  delay factor (in hexadecimal)
+Kdelay: .data   768     #  additional delay factor (in hexadecimal)
